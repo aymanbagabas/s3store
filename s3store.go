@@ -52,14 +52,8 @@ func NewS3Store(bucketName, region string) *S3Store {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := s3.NewFromConfig(cfg)
-	store := &S3Store{
-		bucket: aws.String(bucketName),
-		client: client,
-		prefix: "certmagic",
-	}
 
-	return store
+	return NewS3StoreFromConfig(bucketName, cfg)
 }
 
 func NewS3StoreWithCredentials(accessKey, secretKey, bucketName, region string) *S3Store {
@@ -70,6 +64,11 @@ func NewS3StoreWithCredentials(accessKey, secretKey, bucketName, region string) 
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	return NewS3StoreFromConfig(bucketName, cfg)
+}
+
+func NewS3StoreFromConfig(bucketName string, cfg aws.Config) *S3Store {
 	client := s3.NewFromConfig(cfg)
 	store := &S3Store{
 		bucket: aws.String(bucketName),
