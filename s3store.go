@@ -199,7 +199,7 @@ func (s *S3Store) Lock(ctx context.Context, key string) error {
 	lockFile := s.lockFileName(key)
 
 	for {
-		err := s.createLockFile(lockFile)
+		err := s.createLockFile(ctx, lockFile)
 		if err == nil {
 			// got the lock, yay
 			return nil
@@ -227,7 +227,7 @@ func (s *S3Store) Lock(ctx context.Context, key string) error {
 		case s.fileLockIsStale(info):
 			log.Printf("[INFO][%s] Lock for '%s' is stale; removing then retrying: %s",
 				s, key, lockFile)
-			s.deleteLockFile(lockFile)
+			s.deleteLockFile(ctx, lockFile)
 			continue
 
 		case time.Since(start) > staleLockDuration*2:
@@ -245,8 +245,8 @@ func (s *S3Store) Lock(ctx context.Context, key string) error {
 }
 
 // Unlock releases the lock for name.
-func (s *S3Store) Unlock(key string) error {
-	return s.deleteLockFile(s.lockFileName(key))
+func (s *S3Store) Unlock(ctx context.Context, key string) error {
+	return s.deleteLockFile(ctx, s.lockFileName(key))
 }
 
 func (s *S3Store) String() string {
@@ -265,7 +265,7 @@ func (s *S3Store) fileLockIsStale(info cm.KeyInfo) bool {
 	return time.Since(info.Modified) > staleLockDuration
 }
 
-func (s *S3Store) createLockFile(filename string) error {
+func (s *S3Store) createLockFile(ctx context.Context, filename string) error {
 	//lf := s.lockFileName(key)
 	exists := s.Exists(filename)
 	if exists {
@@ -276,7 +276,7 @@ func (s *S3Store) createLockFile(filename string) error {
 		Key:    aws.String(filename),
 		Body:   bytes.NewReader([]byte("lock")),
 	}
-	_, err := s.client.PutObject(context.Background(), input)
+	_, err := s.client.PutObject(ctx, input)
 
 	if err != nil {
 		return err
@@ -284,12 +284,12 @@ func (s *S3Store) createLockFile(filename string) error {
 	return nil
 }
 
-func (s *S3Store) deleteLockFile(keyPath string) error {
+func (s *S3Store) deleteLockFile(ctx context.Context, keyPath string) error {
 	input := &s3.DeleteObjectInput{
 		Bucket: s.bucket,
 		Key:    aws.String(keyPath),
 	}
-	_, err := s.client.DeleteObject(context.Background(), input)
+	_, err := s.client.DeleteObject(ctx, input)
 	if err != nil {
 		return err
 	}
